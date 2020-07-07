@@ -95,6 +95,9 @@ Launch the bridge with `start.sh` or `node index.js`. If you want to run the bri
 ## FAQ
 See also https://github.com/witchent/matrix-puppet-bridge
 
+### Can I enable encryption for the signal rooms?
+No! See https://github.com/witchent/matrix-puppet-signal/issues/14.
+
 ### I get Error: Cannot find module 'matrix-puppet-signal/node_modules/sqlite3/lib/binding/node-v72-linux-x64/node_sqlite3.node' while building the app
 Make sure you are using a new enough node version, either the newest (13.13.0 at the time of writing) or 12.13.0
 
