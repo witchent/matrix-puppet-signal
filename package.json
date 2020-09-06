@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "matrix-puppet-bridge": "witchent/matrix-puppet-bridge#master",
-    "signal-client": "witchent/node-signal-client#7bf9c44"
+    "patch-package": "6.2.2",
+    "signal-client": "witchent/node-signal-client#844e852"
   }
 }

@@ -33,6 +33,7 @@ class App extends MatrixPuppetBridgeBase {
     this.client.on('message', (ev) => {
       const { source, message, timestamp } = ev.data;
       let room = source;
+      //No need to know all members for received messages
       let members = [source];
       if ( message.group != null ) {
         //Signal sends new groups as a message with a group name set
@@ -51,7 +52,24 @@ class App extends MatrixPuppetBridgeBase {
         roomId: room,
         senderId: source,
         }, message, timestamp, members, false);
-      })
+      });
+    });
+
+    this.client.on('call', (envelope, callingMessage) => {
+      //try and catch because we should only get a first call, so everything should be defined
+      try {
+        let room = envelope.source;
+        const members = [envelope.source];
+        const message = { body: "You missed a call (calls are not supported by this bridge)" };
+        signalQueue.add(() => {
+          return this.handleSignalMessage({
+          roomId: room,
+          senderId: envelope.source,
+          }, message, callingMessage.offer.callId, members, false);
+        });
+      } catch(err) {
+        console.error("We got a call without source or id", err);
+      }
     });
 
     this.client.on('sent', async (ev) => {
@@ -66,7 +84,7 @@ class App extends MatrixPuppetBridgeBase {
           return;
         }
         room = window.btoa(message.group.id);
-//We add all members to be able to correctly use read receipts
+        //We add all members to be able to correctly use read receipts
         const rRoom = await this.bridge.getUserStore().getRemoteUser(room);
         if ( rRoom && rRoom.get('isGroup') == true) {
           members = rRoom.members;
@@ -79,7 +97,7 @@ class App extends MatrixPuppetBridgeBase {
           senderId: undefined,
           senderName: this.myNumber.substring(this.myNumber.lastIndexOf("\\") +1),
         }, message, timestamp, members, true);
-      })
+      });
     });
 
     // triggered when we run syncGroups
@@ -100,10 +118,10 @@ class App extends MatrixPuppetBridgeBase {
     });
 
     this.client.on('read', (ev) => {
-      const { timestamp, reader } = ev.read;
-      console.log("read event", timestamp, reader);
+      const { timestamp, source } = ev.read;
+      console.log("read event", timestamp, source);
       signalQueue.add(() => {
-        return this.handleSignalReadReceipt(timestamp, reader);
+        return this.handleSignalReadReceipt(timestamp, source);
       });
     });
 
@@ -120,7 +138,6 @@ class App extends MatrixPuppetBridgeBase {
         this.handleTypingEvent(sender,status,group);
       });
     });    
-    
     
     this.client.on('client_ready', () => {
       //Request sync and start handling of signal stuff
@@ -312,7 +329,7 @@ class App extends MatrixPuppetBridgeBase {
     }
     
     //pictures as quotes cannot be handled in matrix so we ignore the quote
-    if (message.quote != null && message.attachments.length === 0) {
+    if (message.quote != null && message.attachments != null &&message.attachments.length === 0) {
       
       //Get eventId from the eventstore to look for the quote, always same room so no need for that one
       const quotedEventEntry = await this.bridge.getEventStore().getEntryByRemoteId(message.quote.id, message.quote.author);
@@ -350,7 +367,7 @@ class App extends MatrixPuppetBridgeBase {
     
     const matrixRoomId = await this.getOrCreateMatrixRoomFromThirdPartyRoomId(payload.roomId);
     let matrixEventId;
-    if ( message.attachments.length === 0 ) {
+    if ( message.attachments == null || message.attachments.length === 0 ) {
       if(payload.text == null) {
         return;
       }
